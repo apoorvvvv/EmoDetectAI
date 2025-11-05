@@ -1,0 +1,59 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ---- Virtual Environment ----
+venv/
+.env/
+.venv/
+env/
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---- OS Files ----
+.DS_Store
+Thumbs.db
+
+# ---- Logs & Caches ----
+*.log
+logs/
+*.out
+.cache/
+*.pytest_cache/
+.coverage
+coverage.xml
+
+# ---- Dependencies ----
+*.egg-info/
+dist/
+build/
+
+# ---- Environment / Config ----
+.env.local
+.env.dev
+.env.production
+
+# ---- Data & Models ----
+data/
+datasets/
+checkpoints/
+runs/
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.pkl
+*.npz
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+*.ipynb~
+
+# ---- PyInstaller ----
+*.manifest
+*.spec
