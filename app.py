@@ -1,16 +1,26 @@
 from flask import Flask, render_template, Response
 from camera import VideoCamera
+from detection import detect_emotion
+import cv2
 
 app = Flask(__name__)
 
 def gen(camera):
     while True:
         frame = camera.get_frame()
-        if frame:
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        else:
-            break  # stop if camera feed fails
+        if frame is None:
+            continue
+
+        # Convert bytes back to numpy array for DeepFace
+        frame_np = camera.frame  # add this in VideoCamera class (see below)
+
+        # Run emotion detection every nth frame (to save CPU)
+        emotion, annotated = detect_emotion(frame_np)
+
+        # Encode for streaming
+        _, jpeg = cv2.imencode('.jpg', annotated)
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
 
 @app.route('/')
 def index():
