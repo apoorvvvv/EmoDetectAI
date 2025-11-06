@@ -12,7 +12,7 @@ def gen(camera):
             continue
 
         # Convert bytes back to numpy array for DeepFace
-        frame_np = camera.frame  # add this in VideoCamera class (see below)
+        frame_np = camera.frame  
 
         # Run emotion detection every nth frame (to save CPU)
         emotion, annotated = detect_emotion(frame_np)
