@@ -11,13 +11,11 @@ def gen(camera):
         if frame is None:
             continue
 
-        # Convert bytes back to numpy array for DeepFace
+        #Conversion of bytes back to numpy array for DeepFace
         frame_np = camera.frame  
 
-        # Run emotion detection every nth frame (to save CPU)
         emotion, annotated = detect_emotion(frame_np)
 
-        # Encode for streaming
         _, jpeg = cv2.imencode('.jpg', annotated)
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
