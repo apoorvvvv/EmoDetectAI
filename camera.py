@@ -15,3 +15,4 @@ class VideoCamera:
             return None
         _, jpeg = cv2.imencode('.jpg', self.frame)
         return jpeg.tobytes()
+ 

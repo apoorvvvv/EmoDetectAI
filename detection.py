@@ -2,9 +2,6 @@ from deepface import DeepFace
 import cv2
 
 def detect_emotion(frame):
-    """
-    Takes a BGR OpenCV frame and returns (emotion, annotated_frame)
-    """
     try:
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -16,7 +13,7 @@ def detect_emotion(frame):
             enforce_detection=False
         )
 
-        # DeepFace returns a list of results
+        #DeepFace returns a list of results
         dominant_emotion = result[0]['dominant_emotion']
 
         annotated = frame.copy()
