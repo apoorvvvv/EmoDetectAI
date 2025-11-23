@@ -1,10 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Live Feed</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmoDetectAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <h1>EmoDetectAI</h1>
-  <img src="{{ url_for('video_feed') }}" width="640" height="480">
+  <p class="subtitle">Real-time emotion detection</p>
+  
+  <div class="container">
+    <div class="video-section">
+      <div class="video-wrapper">
+        <video id="video" width="640" height="480" autoplay muted></video>
+        <canvas id="overlay" width="640" height="480"></canvas>
+        <img id="uploaded-image" alt="Uploaded image">
+        <div class="emotion-indicator" id="emotion-indicator">Loading...</div>
+      </div>
+      
+      <div class="controls">
+        <label for="image-upload" class="upload-btn">📷 Upload Image (DeepFace)</label>
+        <input type="file" id="image-upload" accept="image/*">
+        <button class="webcam-btn" id="webcam-btn">🎥 Switch to Webcam</button>
+      </div>
+      
+      <div class="status" id="status">Loading face detection models...</div>
+    </div>
+    
+    <div class="ai-section">
+      <div class="mood-display">
+        <div class="mood-emoji" id="mood-emoji">😐</div>
+        <div class="mood-text" id="mood-text">Neutral</div>
+      </div>
+      
+      <p class="ai-prompt" id="ai-prompt">Detecting your emotion...</p>
+      
+      <button class="recommendation-btn" id="recommendation-btn" disabled>Get AI Insights</button>
+      
+      <div class="ai-response" id="ai-response"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
