@@ -9,7 +9,7 @@ def main() -> None:
 
     if not cap.isOpened():
         print("Error: Could not open webcam.")
-        print("If you're on a Mac, try changing cv2.VideoCapture(0) to cv2.VideoCapture(1)")
+        print("If you're on a Mac or on Windows mode you can have any one of them but you need camera access, try changing cv2.VideoCapture(0) to cv2.VideoCapture(1)")
         sys.exit()
 
     while True:

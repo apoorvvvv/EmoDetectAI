@@ -31,6 +31,7 @@ flatbuffers==25.9.23
 fqdn==1.5.1
 gast==0.6.0
 gdown==5.2.0
+google-generativeai>=0.3.0
 google-pasta==0.2.0
 grpcio==1.76.0
 gunicorn==23.0.0
@@ -104,6 +105,7 @@ pycparser==2.23
 Pygments==2.19.2
 PySocks==1.7.1
 python-dateutil==2.9.0.post0
+python-dotenv==1.0.0
 python-json-logger==4.0.0
 pytz==2025.2
 PyYAML==6.0.3

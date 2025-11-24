@@ -27,6 +27,7 @@ logs/
 *.pytest_cache/
 .coverage
 coverage.xml
+error_log.txt
 
 # ---- Dependencies ----
 *.egg-info/
@@ -34,6 +35,7 @@ dist/
 build/
 
 # ---- Environment / Config ----
+.env
 .env.local
 .env.dev
 .env.production
@@ -57,3 +59,8 @@ runs/
 # ---- PyInstaller ----
 *.manifest
 *.spec
+
+# ---- Temp Files ----
+list_models.py
+temp_cfd.html
+cfd_diagram.png

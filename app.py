@@ -5,13 +5,25 @@ import google.generativeai as genai
 import os
 import base64
 import numpy as np
+import traceback # Import traceback
+from dotenv import load_dotenv
 
+# Load environment variables from .env file if present
+load_dotenv()
 
 app = Flask(__name__)
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyD7rvccbyjcPf5T2cugo6dNnypxAePPaBc')
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+# Securely get API key from environment variable
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
+if not GEMINI_API_KEY:
+    print("Warning: GEMINI_API_KEY not found in environment variables. AI features will not work.")
+
+else:
+    genai.configure(api_key=GEMINI_API_KEY)
+
+# Use gemini-2.0-flash or a safe default if you prefer
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 current_emotion= {"emotion": "neutral", "confidence": 0.0}
 
@@ -53,29 +65,48 @@ def upload_image():
         nparr=np.frombuffer(image_bytes, np.uint8)
         img=cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
+        if img is None:
+             raise ValueError("Could not decode image. File might be corrupted or unsupported format.")
+
         emotion, annotated, confidence= detect_emotion(img)
 
         if emotion:
             current_emotion["emotion"]= emotion
-            current_emotion['confidence']= confidence
+            current_emotion['confidence']= float(confidence)
 
         _, buffer = cv2.imencode('.jpg', annotated)
         img_base64 = base64.b64encode(buffer).decode('utf-8')
 
         return jsonify({
             "emotion": emotion,
-            "confidence": confidence,
+            "confidence": float(confidence),
             "annotated_image": f"data:image/jpeg;base64,{img_base64}"
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        error_msg = str(e)
+        tb = traceback.format_exc()
+        print(f"Upload Error: {error_msg}\n{tb}")
+        # Removed writing to file to keep things clean for deployment
+        return jsonify({"error": error_msg}), 500
 
 #ai recommendation from gemini
-@app.route('/get_reccomendation', methods=['POST'])
+@app.route('/get_recommendation', methods=['POST'])
 def get_recommendation():
     data=request.json
     emotion=data.get('emotion', current_emotion["emotion"])
+    
+    if not GEMINI_API_KEY:
+        return jsonify({"error": "Gemini API Key not configured on server."}), 500
+
+    try:
+        prompt = f"I am feeling {emotion}. Can you give me a short recommendation or quote to help me?"
+        response = model.generate_content(prompt)
+        return jsonify({"recommendation": response.text})
+    except Exception as e:
+        print(f"Gemini Error: {e}") 
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    default_port = int(os.getenv('PORT', 5001))
+    app.run(host='0.0.0.0', port=default_port, debug=True)
