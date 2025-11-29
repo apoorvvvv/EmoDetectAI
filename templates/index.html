@@ -3,31 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EmoDetectAI</title>
+  <title>EmoDetectAI - Real-time Emotion Detection</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎭</text></svg>">
+  
+  <!-- Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <h1>EmoDetectAI</h1>
-  <p class="subtitle">Real-time emotion detection</p>
+  <p class="subtitle">Real-time emotion detection powered by AI</p>
   
   <div class="container">
+    <!-- Video Section -->
     <div class="video-section">
-      <div class="video-wrapper">
-        <video id="video" width="640" height="480" autoplay muted></video>
-        <canvas id="overlay" width="640" height="480"></canvas>
+      <div class="video-wrapper" id="video-wrapper">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
         <img id="uploaded-image" alt="Uploaded image">
-        <div class="emotion-indicator" id="emotion-indicator">Loading...</div>
+        <div class="emotion-indicator" id="emotion-indicator">Initializing...</div>
       </div>
       
       <div class="controls">
-        <label for="image-upload" class="upload-btn">📷 Upload Image (DeepFace)</label>
+        <label for="image-upload" class="upload-btn">
+          <span>📷</span> Upload Image
+        </label>
         <input type="file" id="image-upload" accept="image/*">
-        <button class="webcam-btn" id="webcam-btn">🎥 Switch to Webcam</button>
+        <button class="webcam-btn" id="webcam-btn">
+          <span>🎥</span> Switch to Webcam
+        </button>
       </div>
       
       <div class="status" id="status">Loading face detection models...</div>
     </div>
     
+    <!-- AI Insights Section -->
     <div class="ai-section">
       <div class="mood-display">
         <div class="mood-emoji" id="mood-emoji">😐</div>
@@ -36,12 +52,15 @@
       
       <p class="ai-prompt" id="ai-prompt">Detecting your emotion...</p>
       
-      <button class="recommendation-btn" id="recommendation-btn" disabled>Get AI Insights</button>
+      <button class="recommendation-btn" id="recommendation-btn" disabled>
+        Get AI Insights 🤖
+      </button>
       
       <div class="ai-response" id="ai-response"></div>
     </div>
   </div>
 
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
