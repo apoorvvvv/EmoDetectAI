@@ -9,7 +9,7 @@ def detect_emotion(frame):
     try:
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # try retinaface first (more accurate but slower)
+        #retinaface
         result = None
         try:
             result = DeepFace.analyze(
@@ -19,7 +19,7 @@ def detect_emotion(frame):
                 detector_backend='retinaface'
             )
         except:
-            # fallback to opencv if retinaface fails
+            #opencv if retinaface does not work
             try:
                 result = DeepFace.analyze(
                     img_path=rgb_frame,
@@ -31,14 +31,13 @@ def detect_emotion(frame):
                 print(f"No face found: {e}")
                 result = None
 
-        # no face detected
         if result is None:
             annotated = frame.copy()
             cv2.putText(annotated, "No face detected", (20, 40),
                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
             return None, annotated, 0.0
 
-        # process the result
+        
         if isinstance(result, list) and len(result) > 0:
             emotion = result[0]['dominant_emotion']
             scores = result[0]['emotion']
@@ -47,7 +46,6 @@ def detect_emotion(frame):
             region = result[0].get('region', {})
             annotated = frame.copy()
 
-            # draw box around face
             if region:
                 x = region.get('x', 0)
                 y = region.get('y', 0)
@@ -57,12 +55,12 @@ def detect_emotion(frame):
                 if w > 0 and h > 0:
                     cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-            # add text overlay
+            
             text = f"{emotion} ({confidence:.2f})"
             cv2.putText(annotated, text, (15, 30),
                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
 
-            # show top 3 emotions
+            
             y_pos = 60
             for em, score in sorted(scores.items(), key=lambda x: x[1], reverse=True)[:3]:
                 cv2.putText(annotated, f"{em}: {score:.1f}%", (15, y_pos),

@@ -1,10 +1,10 @@
-// dark/light mode toggle
+// dark/light mode
 const themeToggle = document.getElementById('theme-toggle');
 const themeIconLight = document.querySelector('.theme-icon-light');
 const themeIconDark = document.querySelector('.theme-icon-dark');
 
 function setTheme(isDark) {
-  // disable transitions so it switches instantly
+
   document.documentElement.style.transition = 'none';
   document.body.style.transition = 'none';
 
@@ -15,14 +15,13 @@ function setTheme(isDark) {
   }
   localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
-  // re-enable after switch
+  // switching 
   requestAnimationFrame(() => {
     document.documentElement.style.transition = '';
     document.body.style.transition = '';
   });
 }
 
-// check if user has preference saved
 const savedTheme = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 setTheme(savedTheme === 'dark' || (!savedTheme && prefersDark));
@@ -32,7 +31,6 @@ themeToggle?.addEventListener('click', () => {
   setTheme(!isDark);
 });
 
-// get all the dom elements we need
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
 const uploadedImage = document.getElementById('uploaded-image');
@@ -51,7 +49,7 @@ let currentEmotion = 'neutral';
 let isWebcamMode = true;
 let detectionInterval = null;
 
-// emoticons for each emotion
+//emoticons based on emotions
 const emojis = {
   neutral: ':-|',
   happy: ':-)',
@@ -65,7 +63,7 @@ const emojis = {
   surprise: ':-O'
 };
 
-// colors for each emotion (used for the box outline)
+//box outline
 const emotionColors = {
   neutral: '#94a3b8',
   happy: '#22c55e',
@@ -79,7 +77,7 @@ const emotionColors = {
   surprise: '#f59e0b'
 };
 
-// load the face-api models from cdn
+//loading model
 async function loadModels() {
   const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
   emotionIndicator.textContent = 'Loading AI models...';
@@ -99,7 +97,7 @@ async function loadModels() {
   }
 }
 
-// start webcam stream
+
 async function startWebcam() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -115,7 +113,6 @@ async function startWebcam() {
   }
 }
 
-// resize canvas to match video
 function resizeCanvas() {
   const rect = videoWrapper.getBoundingClientRect();
   overlay.width = rect.width;
@@ -124,7 +121,7 @@ function resizeCanvas() {
 
 window.addEventListener('resize', resizeCanvas);
 
-// main emotion detection loop
+
 let isDetecting = false;
 
 async function detectEmotions() {
@@ -149,7 +146,6 @@ async function detectEmotions() {
     const ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-    // draw boxes around detected faces
     resized.forEach(det => {
       const box = det.detection.box;
       const expressions = det.expressions;
@@ -157,7 +153,6 @@ async function detectEmotions() {
       const dominant = sorted[0][0];
       const color = emotionColors[dominant] || '#6366f1';
 
-      // draw rounded box
       ctx.strokeStyle = color;
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -174,7 +169,7 @@ async function detectEmotions() {
       ctx.closePath();
       ctx.stroke();
 
-      // draw corner accents
+
       const len = 15;
       ctx.lineWidth = 4;
 
@@ -217,16 +212,16 @@ async function detectEmotions() {
     console.error("Detection error:", err);
   } finally {
     isDetecting = false;
-    // run every 200ms to save cpu
+
     if (!video.paused && !video.ended && isWebcamMode) {
       setTimeout(detectEmotions, 200);
     }
   }
 }
 
-// send emotion to backend (throttled)
+
 async function sendEmotionToBackend(emotion, confidence) {
-  if (Math.random() > 0.1) return; // only send 10% of the time
+  if (Math.random() > 0.1) return;
   try {
     await fetch('/update_emotion', {
       method: 'POST',
@@ -238,18 +233,18 @@ async function sendEmotionToBackend(emotion, confidence) {
   }
 }
 
-// update the ui when emotion changes
+
 function updateMoodUI(emotion, confidence = 0.0) {
   if (currentEmotion === emotion) return;
   currentEmotion = emotion;
 
-  // update emoticon
+
   moodEmoji.textContent = emojis[emotion] || ':-|';
   moodText.textContent = emotion;
   emotionIndicator.textContent = emotion + ' (' + (confidence * 100).toFixed(0) + '%)';
   emotionIndicator.style.borderColor = emotionColors[emotion] || '#6366f1';
 
-  // set prompt based on emotion
+  //prompt based on emotion
   const prompts = {
     sad: { text: "You seem a bit down. Want some cheering up?", btn: "Cheer Me Up" },
     happy: { text: "You look great! Want to keep the vibes going?", btn: "Enhance Mood" },
@@ -270,7 +265,7 @@ function updateMoodUI(emotion, confidence = 0.0) {
   recommendationBtn.disabled = false;
 }
 
-// handle image upload
+//for image upload
 async function handleImageUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -319,7 +314,7 @@ async function handleImageUpload(e) {
   }
 }
 
-// switch back to webcam
+
 function switchToWebcam() {
   isWebcamMode = true;
   uploadedImage.style.display = 'none';
@@ -336,7 +331,7 @@ function switchToWebcam() {
   }
 }
 
-// get ai recommendation
+//ai recommendation
 async function getRecommendation() {
   aiResponse.classList.add('show');
   aiResponse.innerHTML = '<p class="loading">Thinking...</p>';
@@ -369,7 +364,7 @@ async function getRecommendation() {
   }
 }
 
-// event listeners
+
 video.addEventListener('play', () => {
   resizeCanvas();
   detectEmotions();
@@ -380,5 +375,5 @@ imageUpload.addEventListener('change', handleImageUpload);
 webcamBtn.addEventListener('click', switchToWebcam);
 recommendationBtn.addEventListener('click', getRecommendation);
 
-// init
+
 loadModels();
