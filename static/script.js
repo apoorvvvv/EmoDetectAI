@@ -1,3 +1,38 @@
+// dark/light mode toggle
+const themeToggle = document.getElementById('theme-toggle');
+const themeIconLight = document.querySelector('.theme-icon-light');
+const themeIconDark = document.querySelector('.theme-icon-dark');
+
+function setTheme(isDark) {
+  // disable transitions so it switches instantly
+  document.documentElement.style.transition = 'none';
+  document.body.style.transition = 'none';
+
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  if (themeIconLight && themeIconDark) {
+    themeIconLight.style.display = isDark ? 'none' : 'block';
+    themeIconDark.style.display = isDark ? 'block' : 'none';
+  }
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+  // re-enable after switch
+  requestAnimationFrame(() => {
+    document.documentElement.style.transition = '';
+    document.body.style.transition = '';
+  });
+}
+
+// check if user has preference saved
+const savedTheme = localStorage.getItem('theme');
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+setTheme(savedTheme === 'dark' || (!savedTheme && prefersDark));
+
+themeToggle?.addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  setTheme(!isDark);
+});
+
+// get all the dom elements we need
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
 const uploadedImage = document.getElementById('uploaded-image');
@@ -16,244 +51,238 @@ let currentEmotion = 'neutral';
 let isWebcamMode = true;
 let detectionInterval = null;
 
-// Emojis for emotions
+// emoticons for each emotion
 const emojis = {
-  neutral: '😐',
-  happy: '😄',
-  sad: '😢',
-  angry: '😠',
-  fearful: '😨',
-  fear: '😨',
-  disgusted: '🤢',
-  disgust: '🤢',
-  surprised: '😲',
-  surprise: '😲'
+  neutral: ':-|',
+  happy: ':-)',
+  sad: ':-(',
+  angry: 'X-(',
+  fearful: ':-O',
+  fear: ':-O',
+  disgusted: ':-/',
+  disgust: ':-/',
+  surprised: ':-O',
+  surprise: ':-O'
 };
 
-// Emotion colors for visual feedback
+// colors for each emotion (used for the box outline)
 const emotionColors = {
   neutral: '#94a3b8',
   happy: '#22c55e',
   sad: '#3b82f6',
   angry: '#ef4444',
-  fearful: '#f59e0b',
-  fear: '#f59e0b',
-  disgusted: '#a855f7',
-  disgust: '#a855f7',
-  surprised: '#ec4899',
-  surprise: '#ec4899'
+  fearful: '#a855f7',
+  fear: '#a855f7',
+  disgusted: '#84cc16',
+  disgust: '#84cc16',
+  surprised: '#f59e0b',
+  surprise: '#f59e0b'
 };
 
-// Load face-api.js models
+// load the face-api models from cdn
 async function loadModels() {
   const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-  
+  emotionIndicator.textContent = 'Loading AI models...';
   try {
-    videoWrapper.classList.add('loading');
-    
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
       faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
       faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
     ]);
-    
-    videoWrapper.classList.remove('loading');
-    statusDiv.textContent = 'Models loaded! Starting webcam...';
-    startVideo();
+    emotionIndicator.textContent = 'Models loaded!';
+    statusDiv.textContent = 'Models ready. Starting webcam...';
+    startWebcam();
   } catch (err) {
-    console.error("Error loading models:", err);
-    videoWrapper.classList.remove('loading');
-    statusDiv.textContent = 'Error loading face detection models';
+    console.error('Error loading models:', err);
+    emotionIndicator.textContent = 'Error loading models';
+    statusDiv.textContent = 'Error: ' + err.message;
   }
 }
 
-function startVideo() {
-  navigator.mediaDevices.getUserMedia({ 
-    video: { 
-      width: { ideal: 640 },
-      height: { ideal: 480 },
-      facingMode: 'user'
-    } 
-  })
-    .then(stream => {
-      video.srcObject = stream;
-      statusDiv.textContent = 'Webcam active - Face detection running';
-      emotionIndicator.textContent = 'Detecting face...';
-    })
-    .catch(err => {
-      console.error("Error accessing camera:", err);
-      statusDiv.textContent = 'Error accessing camera - Please allow camera access';
+// start webcam stream
+async function startWebcam() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
     });
+    video.srcObject = stream;
+    statusDiv.textContent = 'Webcam active - Face detection running';
+    emotionIndicator.textContent = 'Detecting face...';
+  } catch (err) {
+    console.error('Webcam error:', err);
+    statusDiv.textContent = 'Webcam access denied. Try uploading an image instead.';
+    emotionIndicator.textContent = 'No webcam';
+  }
 }
 
-// Resize canvas to match video dimensions
+// resize canvas to match video
 function resizeCanvas() {
-  const rect = video.getBoundingClientRect();
+  const rect = videoWrapper.getBoundingClientRect();
   overlay.width = rect.width;
   overlay.height = rect.height;
 }
 
-// Emotion detection with face-api.js
+window.addEventListener('resize', resizeCanvas);
+
+// main emotion detection loop
+let isDetecting = false;
+
 async function detectEmotions() {
-  if (video.paused || video.ended || !isWebcamMode) return;
+  if (video.paused || video.ended || !isWebcamMode || isDetecting) return;
+  isDetecting = true;
 
-  // Get actual video dimensions from the wrapper
-  const wrapperRect = videoWrapper.getBoundingClientRect();
-  const displaySize = { width: wrapperRect.width, height: wrapperRect.height };
-  
-  // Resize canvas to match wrapper
-  overlay.width = displaySize.width;
-  overlay.height = displaySize.height;
+  try {
+    const rect = videoWrapper.getBoundingClientRect();
+    const displaySize = { width: rect.width, height: rect.height };
 
-  const detections = await faceapi
-    .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceExpressions();
+    if (overlay.width !== displaySize.width || overlay.height !== displaySize.height) {
+      overlay.width = displaySize.width;
+      overlay.height = displaySize.height;
+    }
 
-  const resizedDetections = faceapi.resizeResults(detections, displaySize);
-  const ctx = overlay.getContext('2d');
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
+    const detections = await faceapi
+      .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceExpressions();
 
-  // Custom drawing for better visuals
-  resizedDetections.forEach(detection => {
-    const box = detection.detection.box;
-    const expressions = detection.expressions;
-    const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
-    const dominant = sorted[0][0];
-    const color = emotionColors[dominant] || '#6366f1';
-    
-    // Draw rounded rectangle
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    const radius = 10;
-    ctx.moveTo(box.x + radius, box.y);
-    ctx.lineTo(box.x + box.width - radius, box.y);
-    ctx.quadraticCurveTo(box.x + box.width, box.y, box.x + box.width, box.y + radius);
-    ctx.lineTo(box.x + box.width, box.y + box.height - radius);
-    ctx.quadraticCurveTo(box.x + box.width, box.y + box.height, box.x + box.width - radius, box.y + box.height);
-    ctx.lineTo(box.x + radius, box.y + box.height);
-    ctx.quadraticCurveTo(box.x, box.y + box.height, box.x, box.y + box.height - radius);
-    ctx.lineTo(box.x, box.y + radius);
-    ctx.quadraticCurveTo(box.x, box.y, box.x + radius, box.y);
-    ctx.closePath();
-    ctx.stroke();
-    
-    // Draw corner accents
-    const cornerLength = 15;
-    ctx.lineWidth = 4;
-    
-    // Top-left corner
-    ctx.beginPath();
-    ctx.moveTo(box.x, box.y + cornerLength);
-    ctx.lineTo(box.x, box.y);
-    ctx.lineTo(box.x + cornerLength, box.y);
-    ctx.stroke();
-    
-    // Top-right corner
-    ctx.beginPath();
-    ctx.moveTo(box.x + box.width - cornerLength, box.y);
-    ctx.lineTo(box.x + box.width, box.y);
-    ctx.lineTo(box.x + box.width, box.y + cornerLength);
-    ctx.stroke();
-    
-    // Bottom-left corner
-    ctx.beginPath();
-    ctx.moveTo(box.x, box.y + box.height - cornerLength);
-    ctx.lineTo(box.x, box.y + box.height);
-    ctx.lineTo(box.x + cornerLength, box.y + box.height);
-    ctx.stroke();
-    
-    // Bottom-right corner
-    ctx.beginPath();
-    ctx.moveTo(box.x + box.width - cornerLength, box.y + box.height);
-    ctx.lineTo(box.x + box.width, box.y + box.height);
-    ctx.lineTo(box.x + box.width, box.y + box.height - cornerLength);
-    ctx.stroke();
-  });
+    const resized = faceapi.resizeResults(detections, displaySize);
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
 
-  if (detections.length > 0) {
-    const expressions = detections[0].expressions;
-    const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
-    const dominant = sorted[0][0];
-    const confidence = sorted[0][1];
+    // draw boxes around detected faces
+    resized.forEach(det => {
+      const box = det.detection.box;
+      const expressions = det.expressions;
+      const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
+      const dominant = sorted[0][0];
+      const color = emotionColors[dominant] || '#6366f1';
 
-    updateMoodUI(dominant, confidence);
-    sendEmotionToBackend(dominant, confidence);
-  } else {
-    emotionIndicator.textContent = 'No face detected';
+      // draw rounded box
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      const r = 10;
+      ctx.moveTo(box.x + r, box.y);
+      ctx.lineTo(box.x + box.width - r, box.y);
+      ctx.quadraticCurveTo(box.x + box.width, box.y, box.x + box.width, box.y + r);
+      ctx.lineTo(box.x + box.width, box.y + box.height - r);
+      ctx.quadraticCurveTo(box.x + box.width, box.y + box.height, box.x + box.width - r, box.y + box.height);
+      ctx.lineTo(box.x + r, box.y + box.height);
+      ctx.quadraticCurveTo(box.x, box.y + box.height, box.x, box.y + box.height - r);
+      ctx.lineTo(box.x, box.y + r);
+      ctx.quadraticCurveTo(box.x, box.y, box.x + r, box.y);
+      ctx.closePath();
+      ctx.stroke();
+
+      // draw corner accents
+      const len = 15;
+      ctx.lineWidth = 4;
+
+      ctx.beginPath();
+      ctx.moveTo(box.x, box.y + len);
+      ctx.lineTo(box.x, box.y);
+      ctx.lineTo(box.x + len, box.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(box.x + box.width - len, box.y);
+      ctx.lineTo(box.x + box.width, box.y);
+      ctx.lineTo(box.x + box.width, box.y + len);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(box.x, box.y + box.height - len);
+      ctx.lineTo(box.x, box.y + box.height);
+      ctx.lineTo(box.x + len, box.y + box.height);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(box.x + box.width - len, box.y + box.height);
+      ctx.lineTo(box.x + box.width, box.y + box.height);
+      ctx.lineTo(box.x + box.width, box.y + box.height - len);
+      ctx.stroke();
+    });
+
+    if (detections.length > 0) {
+      const expressions = detections[0].expressions;
+      const sorted = Object.entries(expressions).sort((a, b) => b[1] - a[1]);
+      const dominant = sorted[0][0];
+      const confidence = sorted[0][1];
+      updateMoodUI(dominant, confidence);
+      sendEmotionToBackend(dominant, confidence);
+    } else {
+      emotionIndicator.textContent = 'No face detected';
+    }
+  } catch (err) {
+    console.error("Detection error:", err);
+  } finally {
+    isDetecting = false;
+    // run every 200ms to save cpu
+    if (!video.paused && !video.ended && isWebcamMode) {
+      setTimeout(detectEmotions, 200);
+    }
   }
 }
 
+// send emotion to backend (throttled)
 async function sendEmotionToBackend(emotion, confidence) {
+  if (Math.random() > 0.1) return; // only send 10% of the time
   try {
     await fetch('/update_emotion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ emotion, confidence })
     });
-  } catch (error) {
-    console.error('Error sending emotion to backend:', error);
+  } catch (err) {
+    console.error('Backend error:', err);
   }
 }
 
-// UI update with animations
+// update the ui when emotion changes
 function updateMoodUI(emotion, confidence = 0.0) {
   if (currentEmotion === emotion) return;
   currentEmotion = emotion;
-  
-  // Update emoji with animation
-  moodEmoji.style.transform = 'scale(0.5)';
-  moodEmoji.style.opacity = '0';
-  
-  setTimeout(() => {
-    moodEmoji.textContent = emojis[emotion] || '😐';
-    moodEmoji.style.transform = 'scale(1)';
-    moodEmoji.style.opacity = '1';
-  }, 150);
-  
+
+  // update emoticon
+  moodEmoji.textContent = emojis[emotion] || ':-|';
   moodText.textContent = emotion;
-  emotionIndicator.textContent = `${emotion} (${(confidence * 100).toFixed(0)}%)`;
+  emotionIndicator.textContent = emotion + ' (' + (confidence * 100).toFixed(0) + '%)';
   emotionIndicator.style.borderColor = emotionColors[emotion] || '#6366f1';
 
+  // set prompt based on emotion
   const prompts = {
-    sad: { text: "You seem a bit down. Want some cheering up?", btn: "Cheer Me Up 💙" },
-    happy: { text: "You look great! Want to keep the vibes going?", btn: "Enhance Mood ✨" },
-    angry: { text: "Take a deep breath. Need some calming suggestions?", btn: "Calm Down 🧘" },
-    fearful: { text: "Feeling anxious? Let me help you relax.", btn: "Find Peace 🕊️" },
-    fear: { text: "Feeling anxious? Let me help you relax.", btn: "Find Peace 🕊️" },
-    disgusted: { text: "Something bothering you? Let's shift focus.", btn: "Fresh Perspective 🌿" },
-    disgust: { text: "Something bothering you? Let's shift focus.", btn: "Fresh Perspective 🌿" },
-    surprised: { text: "Surprised? Let's explore that feeling!", btn: "Explore More 🔮" },
-    surprise: { text: "Surprised? Let's explore that feeling!", btn: "Explore More 🔮" },
-    neutral: { text: "Feeling balanced. Want some inspiration?", btn: "Get Inspired 💡" },
-    default: { text: `Detected: ${emotion}. Get personalized insights!`, btn: "Get AI Insights 🤖" }
+    sad: { text: "You seem a bit down. Want some cheering up?", btn: "Cheer Me Up" },
+    happy: { text: "You look great! Want to keep the vibes going?", btn: "Enhance Mood" },
+    angry: { text: "Take a deep breath. Need some calming suggestions?", btn: "Calm Down" },
+    fearful: { text: "Feeling anxious? Let me help you relax.", btn: "Find Peace" },
+    fear: { text: "Feeling anxious? Let me help you relax.", btn: "Find Peace" },
+    disgusted: { text: "Something bothering you? Let's shift focus.", btn: "Fresh Perspective" },
+    disgust: { text: "Something bothering you? Let's shift focus.", btn: "Fresh Perspective" },
+    surprised: { text: "Surprised? Let's explore that feeling!", btn: "Explore More" },
+    surprise: { text: "Surprised? Let's explore that feeling!", btn: "Explore More" },
+    neutral: { text: "Feeling balanced. Want some inspiration?", btn: "Get Inspired" },
+    default: { text: "Detected: " + emotion + ". Get personalized insights!", btn: "Get AI Insights" }
   };
-  
+
   const prompt = prompts[emotion] || prompts.default;
   aiPrompt.textContent = prompt.text;
   recommendationBtn.textContent = prompt.btn;
   recommendationBtn.disabled = false;
 }
 
-// Upload image and send to Flask backend
+// handle image upload
 async function handleImageUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
 
   isWebcamMode = false;
-  if (detectionInterval) clearInterval(detectionInterval);
-  
-  // Show preview
   uploadedImage.src = URL.createObjectURL(file);
   uploadedImage.style.display = 'block';
   video.style.opacity = '0';
-  
-  // Clear overlay
+
   const ctx = overlay.getContext('2d');
   ctx.clearRect(0, 0, overlay.width, overlay.height);
-  
+
   statusDiv.textContent = 'Processing with DeepFace...';
   emotionIndicator.textContent = 'Analyzing...';
   videoWrapper.classList.add('loading');
@@ -262,95 +291,88 @@ async function handleImageUpload(e) {
   formData.append('image', file);
 
   try {
-    const response = await fetch('/upload_image', {
-      method: 'POST',
-      body: formData
-    });
+    const response = await fetch('/upload_image', { method: 'POST', body: formData });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Server error' }));
+      throw new Error(err.error || 'HTTP ' + response.status);
+    }
 
     const data = await response.json();
     videoWrapper.classList.remove('loading');
 
     if (data.emotion) {
       updateMoodUI(data.emotion, data.confidence);
-      statusDiv.textContent = `DeepFace: ${data.emotion} (${(data.confidence * 100).toFixed(1)}% confidence)`;
-      
+      statusDiv.textContent = 'DeepFace: ' + data.emotion + ' (' + (data.confidence * 100).toFixed(1) + '%)';
       if (data.annotated_image) {
         uploadedImage.src = data.annotated_image;
       }
     } else {
-      statusDiv.textContent = data.error || 'No face detected in image';
+      statusDiv.textContent = data.error || 'No face detected';
       emotionIndicator.textContent = 'No face found';
     }
-  } catch (error) {
-    console.error('Error uploading image:', error);
+  } catch (err) {
+    console.error('Upload error:', err);
     videoWrapper.classList.remove('loading');
-    statusDiv.textContent = 'Error processing image';
+    statusDiv.textContent = 'Error: ' + err.message;
     emotionIndicator.textContent = 'Error';
   }
 }
 
-// Switch back to webcam
+// switch back to webcam
 function switchToWebcam() {
   isWebcamMode = true;
   uploadedImage.style.display = 'none';
   video.style.opacity = '1';
-  
+
   const ctx = overlay.getContext('2d');
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   statusDiv.textContent = 'Webcam active - Face detection running';
   emotionIndicator.textContent = 'Detecting face...';
-  
-  // Reset file input
   imageUpload.value = '';
-  
+
   if (!video.paused && !video.ended) {
-    startDetectionLoop();
+    detectEmotions();
   }
 }
 
-// Get AI recommendation from backend
+// get ai recommendation
 async function getRecommendation() {
   aiResponse.classList.add('show');
-  aiResponse.innerHTML = '<p class="loading">🤔 Thinking...</p>';
+  aiResponse.innerHTML = '<p class="loading">Thinking...</p>';
   recommendationBtn.disabled = true;
-  
+
   try {
     const response = await fetch('/get_recommendation', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ emotion: currentEmotion })
     });
-    
+
     const data = await response.json();
-    
+
     if (data.recommendation) {
-      // Format the response nicely
-      const formattedText = data.recommendation
+      const formatted = data.recommendation
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
-      aiResponse.innerHTML = `<p>${formattedText}</p>`;
+      aiResponse.innerHTML = '<p>' + formatted + '</p>';
     } else if (data.error) {
-      aiResponse.innerHTML = `<p>⚠️ ${data.error}</p>`;
+      aiResponse.innerHTML = '<p>Error: ' + data.error + '</p>';
     } else {
-      aiResponse.innerHTML = '<p>Unable to get recommendation. Please try again.</p>';
+      aiResponse.innerHTML = '<p>Unable to get recommendation.</p>';
     }
-  } catch (error) {
-    aiResponse.innerHTML = '<p>❌ Error connecting to AI. Please try again.</p>';
-    console.error('Error:', error);
+  } catch (err) {
+    aiResponse.innerHTML = '<p>Error connecting to AI.</p>';
+    console.error('Error:', err);
   } finally {
     recommendationBtn.disabled = false;
   }
 }
 
-function startDetectionLoop() {
-  if (detectionInterval) clearInterval(detectionInterval);
-  detectionInterval = setInterval(detectEmotions, 100);
-}
-
-// Event listeners
+// event listeners
 video.addEventListener('play', () => {
   resizeCanvas();
-  startDetectionLoop();
+  detectEmotions();
 });
 
 window.addEventListener('resize', resizeCanvas);
@@ -358,8 +380,5 @@ imageUpload.addEventListener('change', handleImageUpload);
 webcamBtn.addEventListener('click', switchToWebcam);
 recommendationBtn.addEventListener('click', getRecommendation);
 
-// Add transition styles to emoji
-moodEmoji.style.transition = 'transform 0.3s ease, opacity 0.15s ease';
-
-// Initialize
+// init
 loadModels();

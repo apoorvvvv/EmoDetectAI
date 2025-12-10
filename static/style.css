@@ -1,16 +1,16 @@
 /* ===== CSS Variables & Theme ===== */
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-card: #1a1a24;
-  --bg-glass: rgba(26, 26, 36, 0.85);
-  --accent-primary: #6366f1;
-  --accent-secondary: #8b5cf6;
-  --accent-glow: rgba(99, 102, 241, 0.4);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --border-color: rgba(99, 102, 241, 0.2);
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-card: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --accent-primary: #000000;
+  --accent-secondary: #333333;
+  --accent-glow: rgba(0, 0, 0, 0.1);
+  --text-primary: #000000;
+  --text-secondary: #444444;
+  --text-muted: #888888;
+  --border-color: rgba(0, 0, 0, 0.15);
   --success: #22c55e;
   --warning: #f59e0b;
   --error: #ef4444;
@@ -20,14 +20,88 @@
   --radius-md: 12px;
   --radius-lg: 20px;
   --radius-xl: 28px;
-  --shadow-glow: 0 0 40px var(--accent-glow);
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.3s ease;
-  --transition-slow: 0.5s ease;
+  --shadow-glow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.15s ease;
+  --transition-slow: 0.25s ease;
+}
+
+/* Dark theme - black and white */
+[data-theme="dark"] {
+  --bg-primary: #000000;
+  --bg-secondary: #111111;
+  --bg-card: #1a1a1a;
+  --bg-glass: rgba(20, 20, 20, 0.9);
+  --accent-primary: #ffffff;
+  --accent-secondary: #cccccc;
+  --accent-glow: rgba(255, 255, 255, 0.1);
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaaa;
+  --text-muted: #666666;
+  --border-color: rgba(255, 255, 255, 0.15);
+  --shadow-glow: 0 4px 20px rgba(255, 255, 255, 0.05);
+}
+
+/* Dark mode button fixes */
+[data-theme="dark"] .upload-btn,
+[data-theme="dark"] .webcam-btn {
+  background: #333333;
+  color: #ffffff;
+  border: 1px solid #555555;
+}
+
+[data-theme="dark"] .upload-btn:hover,
+[data-theme="dark"] .webcam-btn:hover {
+  background: #444444;
+  border-color: #ffffff;
+}
+
+[data-theme="dark"] .recommendation-btn {
+  background: #ffffff;
+  color: #000000;
+}
+
+[data-theme="dark"] .recommendation-btn:hover:not(:disabled) {
+  background: #eeeeee;
+}
+
+/* Sun icon should be white in dark mode */
+[data-theme="dark"] .theme-toggle svg {
+  stroke: #ffffff;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-card);
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-normal);
+  box-shadow: var(--shadow-glow);
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  border-color: var(--accent-primary);
+}
+
+.theme-icon {
+  font-size: 1.5rem;
 }
 
 /* ===== Reset & Base ===== */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -46,36 +120,13 @@ body {
   line-height: 1.6;
 }
 
-/* ===== Background Effects ===== */
+/* Background - simplified for performance */
 body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: 
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(139, 92, 246, 0.1), transparent),
-    radial-gradient(ellipse 50% 30% at 0% 100%, rgba(99, 102, 241, 0.08), transparent);
-  pointer-events: none;
-  z-index: -1;
+  display: none;
 }
 
-/* Animated grid pattern */
 body::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: 
-    linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
-  pointer-events: none;
-  z-index: -1;
+  display: none;
 }
 
 /* ===== Typography ===== */
@@ -87,17 +138,8 @@ h1 {
   font-weight: 800;
   text-align: center;
   margin-top: 2rem;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-primary) 50%, var(--accent-secondary) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
-  animation: titleGlow 3s ease-in-out infinite alternate;
-}
-
-@keyframes titleGlow {
-  0% { filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.3)); }
-  100% { filter: drop-shadow(0 0 40px rgba(139, 92, 246, 0.5)); }
 }
 
 .subtitle {
@@ -142,7 +184,7 @@ h1 {
   border-radius: var(--radius-xl);
   overflow: hidden;
   border: 1px solid var(--border-color);
-  box-shadow: 
+  box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -280,8 +322,17 @@ h1 {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
 }
 
 /* ===== AI Section ===== */
@@ -296,7 +347,7 @@ h1 {
   height: fit-content;
   position: sticky;
   top: 2rem;
-  box-shadow: 
+  box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -310,15 +361,15 @@ h1 {
 }
 
 .mood-emoji {
-  font-size: 4.5rem;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 4rem;
+  font-weight: bold;
   line-height: 1;
-  margin-bottom: 0.75rem;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  margin-bottom: 1rem;
+  transform: rotate(90deg);
+  display: inline-block;
+  white-space: nowrap;
+  letter-spacing: -0.1em;
 }
 
 .mood-text {
@@ -399,8 +450,15 @@ h1 {
 }
 
 @keyframes fadeInOut {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 /* ===== Scrollbar ===== */
@@ -432,32 +490,32 @@ h1 {
   .container {
     padding: 0 1rem 2rem;
   }
-  
+
   h1 {
     margin-top: 1.5rem;
   }
-  
+
   .subtitle {
     margin-bottom: 1.5rem;
   }
-  
+
   .ai-section {
     position: static;
     padding: 1.5rem;
   }
-  
+
   .mood-emoji {
     font-size: 3.5rem;
   }
-  
+
   .mood-text {
     font-size: 1.4rem;
   }
-  
+
   .controls {
     flex-direction: column;
   }
-  
+
   .upload-btn,
   .webcam-btn {
     min-width: 100%;
@@ -480,9 +538,7 @@ h1 {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
-
-
-
-
