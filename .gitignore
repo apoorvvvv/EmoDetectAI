@@ -64,3 +64,6 @@ runs/
 list_models.py
 temp_cfd.html
 cfd_diagram.png
+
+# ---- Test Files ----
+test/
