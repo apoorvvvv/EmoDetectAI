@@ -29,14 +29,14 @@ gdown==5.2.0
 pandas==2.3.3
 tqdm==4.67.1
 
-# DeepFace/TensorFlow dependencies
+#DeepFace/TensorFlow dependencies
 h5py==3.15.1
 protobuf
 ml_dtypes==0.5.3
 packaging==25.0
 typing_extensions==4.15.0
 
-# Additional dependencies for DeepFace
+#dependencies for DeepFace
 requests==2.32.5
 urllib3==2.5.0
 certifi==2025.10.5
