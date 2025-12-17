@@ -21,8 +21,8 @@ if not GEMINI_API_KEY:
 else:
     genai.configure(api_key=GEMINI_API_KEY)
 
-# using gemini 2.5 flash 
-model = genai.GenerativeModel('gemini-2.5-flash')
+# trying experimental model (may have different quota)
+model = genai.GenerativeModel('gemini-exp-1206')
 
 # store current emotion globally
 current_emotion= {"emotion": "neutral", "confidence": 0.0}
@@ -110,8 +110,27 @@ def get_recommendation():
         response = model.generate_content(prompt)
         return jsonify({"recommendation": response.text})
     except Exception as e:
-        print(f"Gemini Error: {e}") 
-        return jsonify({"error": str(e)}), 500
+        error_str = str(e)
+        print(f"Gemini Error: {e}")
+        
+        # Fallback responses when quota is exceeded
+        if "429" in error_str or "quota" in error_str.lower():
+            fallback_responses = {
+                "happy": "Keep spreading that positivity! Your joy is contagious. ✨",
+                "sad": "It's okay to feel down sometimes. Take a deep breath and remember: this too shall pass. 💙",
+                "angry": "Take a moment to breathe deeply. Count to 10. You've got this. 🧘",
+                "fearful": "You are braver than you believe. Face your fears one step at a time. 🌟",
+                "fear": "Courage is not the absence of fear, but taking action despite it. 💪",
+                "disgusted": "Sometimes stepping away and focusing on something positive helps reset your perspective. 🌿",
+                "disgust": "Focus on what brings you joy. The negative will fade. 🌸",
+                "surprised": "Embrace the unexpected! Life's surprises often lead to the best adventures. 🎉",
+                "surprise": "What a moment! Take it in and appreciate the wonder. ✨",
+                "neutral": "A calm mind is a powerful mind. Use this clarity to set your intentions. 🧠"
+            }
+            fallback = fallback_responses.get(emotion, "Take a moment to reflect on your feelings. You're doing great! 💫")
+            return jsonify({"recommendation": f"*AI temporarily unavailable*\n\n{fallback}"})
+        
+        return jsonify({"error": error_str}), 500
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5001))
