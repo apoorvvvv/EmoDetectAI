@@ -8,12 +8,11 @@ import numpy as np
 import traceback
 from dotenv import load_dotenv
 
-# load env vars
 load_dotenv()
 
 app = Flask(__name__)
 
-# get api key
+
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 if not GEMINI_API_KEY:
@@ -21,10 +20,9 @@ if not GEMINI_API_KEY:
 else:
     genai.configure(api_key=GEMINI_API_KEY)
 
-# trying experimental model (may have different quota)
-model = genai.GenerativeModel('gemini-exp-1206')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
-# store current emotion globally
+# storing emotion globally
 current_emotion= {"emotion": "neutral", "confidence": 0.0}
 
 
@@ -32,7 +30,7 @@ current_emotion= {"emotion": "neutral", "confidence": 0.0}
 def index():
     return render_template('index.html')
 
-# receive emotion from frontend face-api 
+#get emotion from frontend face-api 
 @app.route('/update_emotion', methods=['POST'])
 def update_emotion():
     data=request.json
@@ -50,7 +48,7 @@ def update_emotion():
 def get_current_emotion():
     return jsonify(current_emotion)
 
-# handle image upload - uses deepface for detection
+# for image upload (deepface for detection)
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
     if 'image' not in request.files:
@@ -67,21 +65,20 @@ def upload_image():
         if not image_bytes or len(image_bytes) == 0:
             return jsonify({"error": "Empty file"}), 400
         
-        # convert to opencv format
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if img is None:
             return jsonify({"error": "Could not decode image"}), 400
 
-        # run detection
+        # detection
         emotion, annotated, confidence = detect_emotion(img)
 
         if emotion:
             current_emotion["emotion"] = emotion
             current_emotion['confidence'] = float(confidence)
 
-        # encode result as base64 to send back
+        #base64
         _, buffer = cv2.imencode('.jpg', annotated)
         img_base64 = base64.b64encode(buffer).decode('utf-8')
 
@@ -96,7 +93,7 @@ def upload_image():
         print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
-# get ai recommendation using gemini
+#ai recommendation and quotes
 @app.route('/get_recommendation', methods=['POST'])
 def get_recommendation():
     data=request.json
